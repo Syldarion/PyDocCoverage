@@ -6,13 +6,19 @@ CONFIG_EXCLUDE_FILES = "exclude_files"
 CONFIG_SKIP_MAGIC = "skip_magic_funcs"
 CONFIG_SKIP_PRIVATE = "skip_private_funcs"
 CONFIG_REPORT_PERCENT_ONLY = "report_percent_only"
+CONFIG_SKIP_MODULES = "skip_modules"
+CONFIG_SKIP_CLASSES = "skip_classes"
+CONFIG_SKIP_FUNCTIONS = "skip_functions"
 
 CONFIG_FIELDS = [
     CONFIG_EXCLUDE_FOLDERS,
     CONFIG_EXCLUDE_FILES,
     CONFIG_SKIP_MAGIC,
     CONFIG_SKIP_PRIVATE,
-    CONFIG_REPORT_PERCENT_ONLY
+    CONFIG_REPORT_PERCENT_ONLY,
+    CONFIG_SKIP_MODULES,
+    CONFIG_SKIP_CLASSES,
+    CONFIG_SKIP_FUNCTIONS
 ]
 
 CONFIG_DEFAULT = {
@@ -22,7 +28,10 @@ CONFIG_DEFAULT = {
     CONFIG_EXCLUDE_FILES: [],
     CONFIG_SKIP_MAGIC: True,
     CONFIG_SKIP_PRIVATE: True,
-    CONFIG_REPORT_PERCENT_ONLY: False
+    CONFIG_REPORT_PERCENT_ONLY: False,
+    CONFIG_SKIP_MODULES: False,
+    CONFIG_SKIP_CLASSES: False,
+    CONFIG_SKIP_FUNCTIONS: False
 }
 
 
@@ -115,25 +124,28 @@ def _analyze_file(file_path, config):
 
 def _report_data(ast_data, config):
     if config[CONFIG_REPORT_PERCENT_ONLY]:
-        _report_percent_only(ast_data)
+        _report_percent_only(ast_data, config)
     else:
-        _report_all(ast_data)
+        _report_all(ast_data, config)
 
 
-def _report_all(ast_data: dict):
+def _report_all(ast_data: dict, config):
     for file_name in ast_data:
         file_data = ast_data[file_name]
         file_reports = []
-        if file_data["module_docstring"] is None:
-            file_reports.append("Missing docstring for module")
-        for class_data in file_data["classes"]:
-            if class_data["docstring"] is None:
-                lineno = class_data["line"]
-                file_reports.append(f"Line {lineno}: Missing docstring for class \'{class_data['name']}\'")
-        for function_data in file_data["functions"]:
-            if function_data["docstring"] is None:
-                lineno = function_data["line"]
-                file_reports.append(f"Line {lineno}: Missing docstring for function \'{function_data['name']}\'")
+        if config[CONFIG_SKIP_MODULES] is False:
+            if file_data["module_docstring"] is None and config[CONFIG_SKIP_MODULES] is False:
+                file_reports.append("Missing docstring for module")
+        if config[CONFIG_SKIP_CLASSES] is False:
+            for class_data in file_data["classes"]:
+                if class_data["docstring"] is None:
+                    lineno = class_data["line"]
+                    file_reports.append(f"Line {lineno}: Missing docstring for class \'{class_data['name']}\'")
+        if config[CONFIG_SKIP_FUNCTIONS] is False:
+            for function_data in file_data["functions"]:
+                if function_data["docstring"] is None:
+                    lineno = function_data["line"]
+                    file_reports.append(f"Line {lineno}: Missing docstring for function \'{function_data['name']}\'")
         if file_reports:
             reports_delimited = "\n".join(file_reports)
             class_cov = file_data["class_coverage"]
@@ -151,7 +163,7 @@ def _report_all(ast_data: dict):
             print("\n".join(report_sections))
 
 
-def _report_percent_only(ast_data: dict):
+def _report_percent_only(ast_data: dict, config):
     for file_name in ast_data:
         file_data = ast_data[file_name]
         class_cov = file_data["class_coverage"]
