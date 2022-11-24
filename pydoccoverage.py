@@ -48,6 +48,12 @@ def _collect_python_files(root_folder, config):
 
 
 def count_matching(iterable, *predicates):
+    """
+    Check the number of elements in a collection matching given predicates
+    :param iterable: The container to check the elements of
+    :param predicates: Any number of functions to check the elements again
+    :return: A tuple, where each element is the number of elements matching the given predicate
+    """
     v = [0] * len(predicates)
     for e in iterable:
         for i, p in enumerate(predicates):
@@ -130,6 +136,11 @@ def _report_data(ast_data, config):
 
 
 def _report_all(ast_data: dict, config):
+    classes_doc_total = 0
+    functions_doc_total = 0
+    classes_total = 0
+    functions_total = 0
+
     for file_name in ast_data:
         file_data = ast_data[file_name]
         file_reports = []
@@ -138,14 +149,20 @@ def _report_all(ast_data: dict, config):
                 file_reports.append("Missing docstring for module")
         if config[CONFIG_SKIP_CLASSES] is False:
             for class_data in file_data["classes"]:
+                classes_total += 1
                 if class_data["docstring"] is None:
                     lineno = class_data["line"]
                     file_reports.append(f"Line {lineno}: Missing docstring for class \'{class_data['name']}\'")
+                else:
+                    classes_doc_total += 1
         if config[CONFIG_SKIP_FUNCTIONS] is False:
             for function_data in file_data["functions"]:
+                functions_total += 1
                 if function_data["docstring"] is None:
                     lineno = function_data["line"]
                     file_reports.append(f"Line {lineno}: Missing docstring for function \'{function_data['name']}\'")
+                else:
+                    functions_doc_total += 1
         if file_reports:
             reports_delimited = "\n".join(file_reports)
             class_cov = file_data["class_coverage"]
@@ -161,6 +178,12 @@ def _report_all(ast_data: dict, config):
                 "\n"
             ]
             print("\n".join(report_sections))
+
+    total_class_perc = (classes_doc_total / classes_total) * 100
+    total_functions_perc = (functions_doc_total / functions_total) * 100
+    print("Total Coverage")
+    print(f"{classes_doc_total} of {classes_total} classes documented ({total_class_perc:.1f}%)")
+    print(f"{functions_doc_total} of {functions_total} functions documented ({total_functions_perc:.1f}%)")
 
 
 def _report_percent_only(ast_data: dict, config):
